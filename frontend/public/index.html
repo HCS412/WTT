@@ -15,11 +15,39 @@
     </header>
 
     <main class="container mt-5">
+        <!-- Portfolio Form -->
         <div class="row justify-content-center">
             <div class="col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h2 class="card-title text-center">Portfolio Calculator</h2>
+                <div id="portfolioFormContainer"></div>
+            </div>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="row text-center mt-5" id="metricsOverview">
+            <div class="col-md-3" id="avgCheckSizeCard"></div>
+            <div class="col-md-3" id="initialAllocationCard"></div>
+            <div class="col-md-3" id="followOnReserveCard"></div>
+            <div class="col-md-3" id="portfolioIRRCard"></div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="row mt-5">
+            <div class="col-md-6" id="allocationChartContainer"></div>
+            <div class="col-md-6" id="returnsChartContainer"></div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <p>&copy; 2024 What's My Thesis? - All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Import reusable components
+        class PortfolioForm extends HTMLElement {
+            connectedCallback() {
+                this.innerHTML = `
+                    <div class="card shadow-sm p-4">
+                        <h2 class="text-center mb-4">Portfolio Calculator</h2>
                         <form id="portfolioForm">
                             <div class="mb-3">
                                 <label for="fundSize" class="form-label">Fund Size ($)</label>
@@ -44,148 +72,87 @@
                             <button type="submit" class="btn btn-primary w-100">Calculate</button>
                         </form>
                     </div>
-                </div>
-                <div id="results" class="mt-4 d-none">
-                    <h3>Results</h3>
-                    <ul class="list-group">
-                        <li class="list-group-item">
-                            <strong>Average Check Size:</strong> <span id="avgCheckSize"></span>
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Initial Allocation:</strong> <span id="initialAllocation"></span>
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Follow-On Reserve:</strong> <span id="followOnReserve"></span>
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Expected Return:</strong> <span id="expectedReturn"></span>
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Portfolio IRR:</strong> <span id="portfolioIRR"></span>
-                        </li>
-                    </ul>
+                `;
+            }
+        }
 
-                    <!-- Allocation Chart -->
-                    <div class="mt-4">
-                        <h4>Portfolio Allocation</h4>
-                        <canvas id="allocationChart"></canvas>
+        customElements.define('portfolio-form', PortfolioForm);
+
+        class MetricCard extends HTMLElement {
+            connectedCallback() {
+                const { label, value, color, icon } = this.dataset;
+                this.innerHTML = `
+                    <div class="card shadow-sm text-center">
+                        <div class="card-body">
+                            <div class="mb-3" style="color: ${color || '#000'};">
+                                <i class="${icon}" style="font-size: 24px;"></i>
+                            </div>
+                            <h5 class="card-title">${label}</h5>
+                            <h3>${value}</h3>
+                        </div>
                     </div>
+                `;
+            }
+        }
 
-                    <!-- Returns Chart -->
-                    <div class="mt-4">
-                        <h4>Expected Returns by Exit Multiples</h4>
-                        <canvas id="returnsChart"></canvas>
+        customElements.define('metric-card', MetricCard);
+
+        class ChartContainer extends HTMLElement {
+            connectedCallback() {
+                const { title, type, data, options } = JSON.parse(this.dataset.config);
+                this.innerHTML = `
+                    <div class="card shadow-sm p-4">
+                        <h5 class="text-center">${title}</h5>
+                        <canvas></canvas>
                     </div>
-                </div>
-            </div>
-        </div>
-    </main>
+                `;
+                const ctx = this.querySelector('canvas').getContext('2d');
+                new Chart(ctx, { type, data, options });
+            }
+        }
 
-    <footer class="bg-dark text-white text-center py-3 mt-5">
-        <p>&copy; 2024 What's My Thesis? - All rights reserved.</p>
-    </footer>
+        customElements.define('chart-container', ChartContainer);
 
-    <script>
-        // Render Allocation Chart
-        const renderAllocationChart = (initialAllocation, followOnReserve) => {
-            const ctx = document.getElementById("allocationChart").getContext("2d");
-
-            // Destroy previous chart instance to prevent duplication
-            if (window.allocationChart) window.allocationChart.destroy();
-
-            window.allocationChart = new Chart(ctx, {
+        // Attach Components
+        document.getElementById('portfolioFormContainer').appendChild(document.createElement('portfolio-form'));
+        document.getElementById('avgCheckSizeCard').innerHTML = `
+            <metric-card data-label="Average Check Size" data-value="$1,000,000" data-color="#36A2EB" data-icon="bi bi-cash"></metric-card>
+        `;
+        document.getElementById('initialAllocationCard').innerHTML = `
+            <metric-card data-label="Initial Allocation" data-value="$7,000,000" data-color="#4CAF50" data-icon="bi bi-pie-chart"></metric-card>
+        `;
+        document.getElementById('followOnReserveCard').innerHTML = `
+            <metric-card data-label="Follow-On Reserve" data-value="$3,000,000" data-color="#FF6384" data-icon="bi bi-stack"></metric-card>
+        `;
+        document.getElementById('portfolioIRRCard').innerHTML = `
+            <metric-card data-label="Portfolio IRR" data-value="25%" data-color="#FFCC00" data-icon="bi bi-graph-up"></metric-card>
+        `;
+        document.getElementById('allocationChartContainer').innerHTML = `
+            <chart-container data-config='${JSON.stringify({
+                title: "Portfolio Allocation",
                 type: "pie",
                 data: {
                     labels: ["Initial Allocation", "Follow-On Reserve"],
                     datasets: [
-                        {
-                            data: [initialAllocation, followOnReserve],
-                            backgroundColor: ["#36A2EB", "#FF6384"],
-                        },
-                    ],
+                        { data: [7000000, 3000000], backgroundColor: ["#36A2EB", "#FF6384"] }
+                    ]
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: "top" },
-                    },
-                },
-            });
-        };
-
-        // Render Returns Chart
-        const renderReturnsChart = (exitMultiples, returns) => {
-            const ctx = document.getElementById("returnsChart").getContext("2d");
-
-            // Destroy previous chart instance to prevent duplication
-            if (window.returnsChart) window.returnsChart.destroy();
-
-            window.returnsChart = new Chart(ctx, {
+                options: {}
+            })}'></chart-container>
+        `;
+        document.getElementById('returnsChartContainer').innerHTML = `
+            <chart-container data-config='${JSON.stringify({
+                title: "Expected Returns by Exit Multiples",
                 type: "bar",
                 data: {
-                    labels: exitMultiples,
+                    labels: ["3x", "5x", "10x"],
                     datasets: [
-                        {
-                            label: "Expected Returns ($)",
-                            data: returns,
-                            backgroundColor: "#4CAF50",
-                        },
-                    ],
+                        { label: "Expected Returns ($)", data: [3e6, 5e6, 1e7], backgroundColor: "#4CAF50" }
+                    ]
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                    },
-                    scales: {
-                        x: { title: { display: true, text: "Exit Multiples" } },
-                        y: { title: { display: true, text: "Expected Returns ($)" }, beginAtZero: true },
-                    },
-                },
-            });
-        };
-
-        // Form Submission Handler
-        document.getElementById("portfolioForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData);
-
-            try {
-                const response = await fetch("http://127.0.0.1:5000/api/calculate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        fund_size: parseFloat(data.fund_size),
-                        num_startups: parseInt(data.num_startups),
-                        reserve_percent: parseFloat(data.reserve_percent) / 100,
-                        target_exit_multiple: parseFloat(data.target_exit_multiple || 3),
-                        success_rate: parseFloat(data.success_rate || 10) / 100,
-                    }),
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    document.getElementById("results").classList.remove("d-none");
-                    document.getElementById("avgCheckSize").textContent = `$${result.avg_check_size.toLocaleString()}`;
-                    document.getElementById("initialAllocation").textContent = `$${result.initial_allocation.toLocaleString()}`;
-                    document.getElementById("followOnReserve").textContent = `$${result.follow_on_reserve.toLocaleString()}`;
-                    document.getElementById("expectedReturn").textContent = `$${result.expected_return.toLocaleString()}`;
-                    document.getElementById("portfolioIRR").textContent = `${result.portfolio_IRR.toFixed(2)}%`;
-
-                    // Render charts
-                    renderAllocationChart(result.initial_allocation, result.follow_on_reserve);
-                    renderReturnsChart([3, 5, 10], [result.expected_return * 0.5, result.expected_return, result.expected_return * 1.5]); // Example data
-                } else {
-                    alert(result.error || "An error occurred while calculating.");
-                }
-            } catch (error) {
-                console.error(error);
-                alert("Failed to connect to the server. Please try again.");
-            }
-        });
+                options: { responsive: true }
+            })}'></chart-container>
+        `;
     </script>
 </body>
 </html>
